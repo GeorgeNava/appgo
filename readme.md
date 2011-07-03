@@ -1,6 +1,4 @@
-package app
-
-app.go is a simple web framework for use in Google AppEngine. Just copy the app folder to your working folder and import it from your program. That's it. A web application ready to run in no time. Also, app.go comes with a powerful datastore manager to simplify your interactions with BigTable.
+*app.go* is a simple web framework for use in Google AppEngine. Just copy the app folder to your working folder and import it from your program. That's it. A web application ready to run in no time. Also, app.go comes with a powerful datastore manager to simplify your interactions with BigTable.
 
 
 Here is the Guestbook example from AppEngine rewritten using app.go
@@ -41,5 +39,9 @@ Here is the Guestbook example from AppEngine rewritten using app.go
         DB.New(&rec)
         self.Redirect("/")
     }
+
+As you can see, using app.go we make it really simple to write web apps in go.
+
+This is the first release of the package, we will be working on adding more features like regexp routing, oauth and more. We welcome your feedback for any special request or bug fix.
 
 Enjoy!
