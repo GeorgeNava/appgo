@@ -43,7 +43,7 @@ Here is the Guestbook example from AppEngine rewritten using app.go
         self.Redirect("/")
     }
 
-As you can see, using app.go we make it really simple to write web apps in go.
+As you can see, with app.go we make it really easy to write web apps in go.
 
 This is the first release of the package, we will be working on adding more features like regexp routing, oauth and more. We welcome your feedback for any special request or bug fix.
 
