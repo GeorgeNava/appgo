@@ -10,8 +10,6 @@ Here is the Guestbook example from AppEngine rewritten using app.go
 
     import "app"
 
-    var DB = &app.DB
-
     type Greeting struct {
         Author  string
         Content string
@@ -19,32 +17,38 @@ Here is the Guestbook example from AppEngine rewritten using app.go
     }
 
     func init() {
-      views := app.Views{
-        "index" : index,
-        "sign"  : sign,
-      }
-      app.Run(views)
+        app.Start()
+        app.Get ( "/index" , index )
+        app.Post( "/sign"  , sign  )
     }
 
-    func index(self app.Context) {
+    func index(ø app.Context) {
         recs := make([]Greeting, 0, 10)
-        qry  := DB.Query("Greeting").Order("-Date").Limit(10)
-        DB.Select(qry,&recs)
-        self.Render("index",recs)
+        qry  := ø.DB.Query("Greeting").Order("-Date").Limit(10)
+        ø.DB.Select(qry,&recs)
+        ø.Render("index",recs)
     }
 
-    func sign(self app.Context) {
+    func sign(ø app.Context) {
         rec := Greeting{
-            Author : self.User.Nick,
-            Content: self.GetValue("content"),
-            Date   : DB.Now(),
+            Author : ø.User.Nick,
+            Content: ø.GetValue("content"),
+            Date   : ø.DB.Now(),
         }
-        DB.New(&rec)
-        self.Redirect("/")
+        ø.DB.New(&rec)
+        ø.Redirect("/")
     }
 
-As you can see, with app.go we make it really easy to write web apps in go.
 
-This is the first release of the package, we will be working on adding more features like regexp routing, oauth and more. We welcome your feedback for any special request or bug fix.
+As you can see, with app.go we make it really easy to write web apps in go. We welcome your feedback for any special request or bug fix.
 
 Enjoy!
+
+
+CHANGELOG v2
+------------
+* implement regexp router
+* create new instance of DB for every request
+* use nanoseconds in db.sequence
+* on init: if no templates error/notfound generate default templates.
+* cache templates

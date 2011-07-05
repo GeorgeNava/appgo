@@ -24,7 +24,8 @@ func (db *DSM) Now() int64{
 // USE:  customer.id = db.Sequence()
 func (db *DSM) Sequence() string {
   var nnn = rand.Intn(899) + 100  // from 100 to 999
-  return strconv.Itoa64(time.Seconds())+strconv.Itoa(nnn)
+  return strconv.Itoa64(time.Nanoseconds())+strconv.Itoa(nnn)
+  // 1234567890123123123nnn
 }
 
 // USE:  customer.key = db.NewKey("Customer")
@@ -97,14 +98,14 @@ func (db *DSM) PutByKey(key *datastore.Key, rec interface{}) bool {
   return err==nil
 }
 
-// USE: DB:Delete("Customer","ALFKI")
+// USE: db.Delete("Customer","ALFKI")
 func (db *DSM) Delete(kind string, id string) bool {
   key := db.KeyName(kind, id)
   err := datastore.Delete(db.Context, key)
   return err==nil
 }
 
-// USE: DB:Delete(key)
+// USE: db.DeleteByKey(key)
 func (db *DSM) DeleteByKey(key *datastore.Key) bool {
   err := datastore.Delete(db.Context, key)
   return err==nil

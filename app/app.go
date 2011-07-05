@@ -5,52 +5,95 @@ import(
   "fmt"
   "log"
   "http"
+  "path"
   "time"
+  "regexp"
   "strings"
   "template"
   "appengine"
   "appengine/user"
 )
 
-var DB = &DSM{}  // use datastore manager from db.go to update context here
-
 
 
 
 //  APP Server  -------------------------------------------
 
-type AppConfig struct{
+type Settings struct{
     Debug     bool
     Root      string
     Media     string
     Templates string
 }
 
-type AppServer struct {
-  Views     Views
+type Server struct {
+    Views      Views
+    Routes     Routes
+    Templates  Templates
 }
 
-type View func(Context)
-
+type View  func(Context)
 type Views map[string]View
 
-var server *AppServer
+type Route struct{
+    Method   string
+    Pattern  string
+    Handler  View
+    regex   *regexp.Regexp
+}
+type Routes []Route
 
-func Run(list Views){
+type Template *template.Template
+type Templates map[string]Template
+
+var server *Server
+
+func Start(){
   Log(">> APP running...")
   root,_ := os.Getwd()
-  wdir := os.Getenv("APPLICATION_ID")+"/"
+  main := os.Getenv("APPLICATION_ID")
+  //main = appengine.NewContext(???).AppID()
   Config.Root = root
-  if Config.Media == "*" { // Use app folder
-    Config.Media = wdir
+  if Config.Media == "*" {
+    Config.Media = path.Join(root, main)+"/"
   }
-  if Config.Templates == "*" { // Use app folder
-    Config.Templates = wdir
+  if Config.Templates == "*" {
+    Config.Templates = path.Join(root, main)+"/"
   }
-  server = &AppServer{}
-  server.Views = list
-  http.HandleFunc("/",router())
-  return
+  server = &Server{}
+  server.initTemplates()
+  server.Routes = []Route{}
+  http.HandleFunc("/",routeHandler())
+}
+
+func Run(views Views){
+  Log(">> APP running...")
+  root,_ := os.Getwd()
+  main := os.Getenv("APPLICATION_ID")
+  //main = appengine.NewContext(???).AppID()
+  Config.Root = root
+  if Config.Media == "*" {
+    Config.Media = path.Join(root, main)+"/"
+  }
+  if Config.Templates == "*" {
+    Config.Templates = path.Join(root, main)+"/"
+  }
+  server = &Server{}
+  server.initTemplates()
+  server.Views = views
+  http.HandleFunc("/",viewHandler())
+}
+
+func (s Server) initTemplates() {
+  server.Templates = make(map[string]Template)
+  if !fileExist(getTemplateName("error")) {
+    tmp,_ := template.Parse(htmlError,nil)
+    server.Templates["error"] = tmp
+  }
+  if !fileExist(getTemplateName("notfound")) {
+    tmp,_ := template.Parse(htmlNotFound,nil)
+    server.Templates["notfound"] = tmp
+  }
 }
 
 // Parse pretty urls: /path/value1/value2
@@ -87,15 +130,23 @@ func getForm(r *http.Request) map[string]string {
   return form
 }
 
+func getDB(r *http.Request) DSM {
+  db := DSM{
+    Context:appengine.NewContext(r),
+  }
+  return db
+}
+
 func getContext(w http.ResponseWriter, r *http.Request) Context {
   ctx := Context{}
   ctx.Method      = r.Method
-  ctx.Params      = getParams(r)
   ctx.Values      = getValues(r)
+  ctx.Params      = getParams(r)
   ctx.Form        = getForm(r)
   ctx.Request     = r
   ctx.Response    = w
   ctx.User        = setUser(r)
+  ctx.DB          = getDB(r)
   return ctx
 }
 
@@ -104,12 +155,75 @@ func getContext(w http.ResponseWriter, r *http.Request) Context {
 
 //  APP Router  ------------------------------------------
 
-func router() http.HandlerFunc {
+func Get(pattern string, view View) {
+  Handle("GET",pattern,view)
+}
+func Post(pattern string, view View) {
+  Handle("POST",pattern,view)
+}
+func Put(pattern string, view View) {
+  Handle("PUT",pattern,view)
+}
+func Delete(pattern string, view View) {
+  Handle("DELETE",pattern,view)
+}
+
+func Handle(method string, pattern string, view View) {
+  m  := strings.ToUpper(method)
+  rx, err := regexp.Compile(pattern)
+  if err!=nil {
+    Log(">>> ERROR compiling regexp: ",pattern)
+    return
+  }
+  server.Routes = append(server.Routes,Route{Method:m,Pattern:pattern,Handler:view,regex:rx})
+  Log(server.Routes)
+}
+
+func routeHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err, ok := recover().(os.Error); ok {
 				w.WriteHeader(http.StatusInternalServerError)
-				var t = template.MustParseFile(getTemplateName("error"),nil)
+				t := getTemplate("error")
+				t.Execute(w, err)
+			}
+		}()
+        path := r.URL.Path
+        if path=="/" { path = "/index" }
+        meth := strings.ToUpper(r.Method)
+        req  := meth+" "+path
+        Log(">>> PATH: "+path)
+        Log(">>> REQ: "+req)
+        var route Route
+        var values []string
+        found := false
+        for i := range server.Routes {
+            if server.Routes[i].Method==meth && server.Routes[i].regex.MatchString(path) {
+                route  = server.Routes[i]
+                params := route.regex.FindAllStringSubmatch(path,-1)
+                values = params[0][1:]
+                found  = true
+                break
+            }
+        }
+        Log(">>> VALUES: ",values)
+        if found { 
+          Log(">>> FOUND: ",route)
+		  ctx := getContext(w,r)
+		  ctx.Values = values
+		  route.Handler(ctx)
+        } else { 
+          NotFound(w, "Couldn't match any handler for this pattern: "+req)
+		}
+	}
+}
+
+func viewHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if err, ok := recover().(os.Error); ok {
+				w.WriteHeader(http.StatusInternalServerError)
+				t := getTemplate("error")
 				t.Execute(w, err)
 			}
 		}()
@@ -118,9 +232,8 @@ func router() http.HandlerFunc {
         if(path==""){ path = "index" }
         fn := server.Views[path]
         if fn==nil{ 
-          NotFound(w, "There is no view '"+path+"' in our servers")
+          NotFound(w, "There is no view named '"+path+"' in our servers")
         } else { 
-          DB.Context = appengine.NewContext(r)
 		  ctx := getContext(w,r)
 		  fn(ctx)
 		}
@@ -140,6 +253,7 @@ type Context struct {
   Request   *http.Request
   Response   http.ResponseWriter
   User      *UserType
+  DB         DSM
 }
 
 func (ctx Context) GetValue(key string) string {
@@ -164,8 +278,8 @@ func (ctx Context) Show(file string){
   ctx.Render(file, nil)
 }
 
-func (ctx Context) Render(file string, data interface{}){
-  tmp := template.MustParseFile(getTemplateName(file),nil)
+func (ctx Context) Render(name string, data interface{}){
+  tmp := getTemplate(name)
   tmp.Execute(ctx.Response, data)
 }
 
@@ -244,20 +358,70 @@ func webTime(t *time.Time) string {
   return gmt
 }
 
+
+// Cache templates
+func getTemplate(name string) *template.Template {
+  tmp := server.Templates[name]
+  if tmp==nil {
+    tmp = template.MustParseFile(getTemplateName(name),nil)
+    server.Templates[name] = tmp
+  }
+  return tmp
+}
+
 func getTemplateName(name string) string {
-  if strings.Contains(name,".") { return Config.Templates + name }
+  if strings.Contains(name,".") {
+    return Config.Templates + name
+  }
   return Config.Templates + name + ".html"
 }
 
+func fileExist(name string) bool { 
+  _, err := os.Stat(name) 
+  return err==nil
+} 
+
 func NotFound(w http.ResponseWriter, txt string) {
   w.WriteHeader(http.StatusNotFound)
-  tmp := template.MustParseFile(getTemplateName("notfound"),nil)
+  tmp := getTemplate("notfound")
   tmp.Execute(w, txt)
 }
 
-func Log(x interface{}){
-  log.Println(x)
+func Log(stuff ...interface{}){
+  log.Println(stuff...)
 }
+
+
+
+
+//  APP templates  ----------------------------------------
+/*
+You can use your own templates, just create two files error.html and notfound.html and place them in your Config.Templates folder
+*/
+
+var htmlError = `
+<html>
+<head>
+  <title>Error</title>
+</head>
+<body>
+  <h4>Oops! An error occurred:</h4>
+  <pre>{@}</pre>
+</body>
+</html>
+`
+
+var htmlNotFound = `
+<html>
+<head>
+  <title>Not found</title>
+</head>
+<body>
+  <h4>The requested resource was not found in our servers</h4>
+  <pre>{@}</pre>
+</body>
+</html>
+`
 
 //  END OF PROGRAM  =======================================
 
