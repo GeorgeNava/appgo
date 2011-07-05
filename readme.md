@@ -22,21 +22,21 @@ Here is the Guestbook example from AppEngine rewritten using app.go
         app.Post( "/sign"  , sign  )
     }
 
-    func index(ø app.Context) {
+    func index(self app.Context) {
         recs := make([]Greeting, 0, 10)
-        qry  := ø.DB.Query("Greeting").Order("-Date").Limit(10)
-        ø.DB.Select(qry,&recs)
-        ø.Render("index",recs)
+        qry  := self.DB.Query("Greeting").Order("-Date").Limit(10)
+        self.DB.Select(qry,&recs)
+        self.Render("index",recs)
     }
 
-    func sign(ø app.Context) {
+    func sign(self app.Context) {
         rec := Greeting{
-            Author : ø.User.Nick,
-            Content: ø.GetValue("content"),
-            Date   : ø.DB.Now(),
+            Author : self.User.Nick,
+            Content: self.GetValue("content"),
+            Date   : self.DB.Now(),
         }
-        ø.DB.New(&rec)
-        ø.Redirect("/")
+        self.DB.New(&rec)
+        self.Redirect("/")
     }
 
 
