@@ -46,11 +46,11 @@ Enjoy!
 
 Join us at the wiki for more info:
 
-* [How to set up some initial configuration?](wiki/config)
-* [How to use the regexp router?](wiki/routing)
-* [How to use the power of app.Context](wiki/context)
-* [How to use the datastore manager?](wiki/datastore)
-* [My project is getting bigger, how to organize it?](wiki/organize)
+* [How to set up some initial configuration?](appgo/wiki/config)
+* [How to use the regexp router?](appgo/wiki/routing)
+* [How to use the power of app.Context](appgo/wiki/context)
+* [How to use the datastore manager?](appgo/wiki/datastore)
+* [My project is getting bigger, how to organize it?](appgo/wiki/organize)
 
 
 CHANGELOG v2
