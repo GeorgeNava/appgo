@@ -176,7 +176,6 @@ func Handle(method string, pattern string, view View) {
     return
   }
   server.Routes = append(server.Routes,Route{Method:m,Pattern:pattern,Handler:view,regex:rx})
-  Log(server.Routes)
 }
 
 func routeHandler() http.HandlerFunc {
@@ -192,8 +191,6 @@ func routeHandler() http.HandlerFunc {
         if path=="/" { path = "/index" }
         meth := strings.ToUpper(r.Method)
         req  := meth+" "+path
-        Log(">>> PATH: "+path)
-        Log(">>> REQ: "+req)
         var route Route
         var values []string
         found := false
@@ -206,9 +203,7 @@ func routeHandler() http.HandlerFunc {
                 break
             }
         }
-        Log(">>> VALUES: ",values)
         if found { 
-          Log(">>> FOUND: ",route)
 		  ctx := getContext(w,r)
 		  ctx.Values = values
 		  route.Handler(ctx)
@@ -396,7 +391,8 @@ func Log(stuff ...interface{}){
 
 //  APP templates  ----------------------------------------
 /*
-You can use your own templates, just create two files error.html and notfound.html and place them in your Config.Templates folder
+    You can use your own templates, just create two files error.html and notfound.html 
+    and place them in your Config.Templates folder
 */
 
 var htmlError = `
