@@ -1,5 +1,6 @@
 package app
 
+
 import(
   "io"
   "fmt"
@@ -81,7 +82,7 @@ func pluralFilter(w io.Writer, format string, data ...interface{}) {
 }
 
 
-// {Descript|ellipsis}
+// {Description|ellipsis}
 func ellipsisFilter(w io.Writer, format string, data ...interface{}) {
   n:=40  // change to your needs
   for _, item := range data {
