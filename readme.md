@@ -37,12 +37,14 @@ As you can see, with app.go we make it really easy to write web apps in go. We w
 
 Enjoy!
 
+
 * [Join us at the wiki for more info](appgo/wiki)
 * [How to set up some initial configuration?](appgo/wiki/config)
 * [How to use the regexp router?](appgo/wiki/routing)
 * [How to use the power of app.Context](appgo/wiki/context)
 * [How to use the datastore manager?](appgo/wiki/datastore)
 * [How to design your models?](appgo/wiki/models)
+* [How to use template formatters?](appgo/wiki/filters)
 * [My project is getting bigger, how to organize it?](appgo/wiki/organize)
 
 
