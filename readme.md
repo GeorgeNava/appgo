@@ -41,7 +41,7 @@ Here is the Guestbook example from AppEngine rewritten using app.go
             Date   : DB.Now(),
         }
         DB.New(&rec)
-        ctx.Redirect("/")
+        &oslash;.Redirect("/")
     }
 
 
@@ -70,4 +70,5 @@ CHANGELOG v2
 * use nanoseconds in db.sequence
 * on init: if no templates error/notfound generate default templates.
 * cache templates
+
 
