@@ -42,6 +42,7 @@ Enjoy!
 * [How to use the regexp router?](appgo/wiki/routing)
 * [How to use the power of app.Context](appgo/wiki/context)
 * [How to use the datastore manager?](appgo/wiki/datastore)
+* [How to design your models?](appgo/wiki/models)
 * [My project is getting bigger, how to organize it?](appgo/wiki/organize)
 
 
