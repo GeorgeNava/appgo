@@ -21,8 +21,8 @@ Here is the Guestbook example from AppEngine rewritten using app.go
 
     func init() {
         app.Start()
-        app.Get ( "/index" , index )
-        app.Post( "/sign"  , sign  )
+        app.Get ("/index", index)
+        app.Post("/sign" , sign )
     }
 
     func index(ctx app.Context) {
