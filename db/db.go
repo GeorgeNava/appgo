@@ -1,5 +1,6 @@
 package db
 
+
 import(
   "http"
   "rand"
@@ -13,12 +14,12 @@ import(
 
 
 //  DATASTORE MANAGER  -------------------------------------
-
 type Manager struct {
   Request  *http.Request
   Context   appengine.Context
 }
 
+// To instantiate a new DB Manager with a fresh context
 func New(r *http.Request) Manager{
   mgr := Manager{Request:r,Context:appengine.NewContext(r)}
   return mgr
