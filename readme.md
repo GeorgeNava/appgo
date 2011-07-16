@@ -41,7 +41,7 @@ Here is the Guestbook example from AppEngine rewritten using app.go
             Date   : DB.Now(),
         }
         DB.New(&rec)
-        &oslash;.Redirect("/")
+        ø.Redirect("/")
     }
 
 
