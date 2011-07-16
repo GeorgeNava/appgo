@@ -10,14 +10,8 @@ Here is the Guestbook example from AppEngine rewritten using app.go
 
     import(
         "app"
-        "db"
+        "models"
     )
-
-    type Greeting struct {
-        Author  string
-        Content string
-        Date    int64
-    }
 
     func init() {
         app.Start()
@@ -26,24 +20,18 @@ Here is the Guestbook example from AppEngine rewritten using app.go
     }
 
     func index(ctx app.Context) {
-        DB   := db.New(ctx)
-        recs := make([]Greeting, 0, 10)
-        qry  := DB.Query("Greeting").Order("-Date").Limit(10)
-        DB.Select(qry,&recs)
+        recs := models.GetGreetings(ctx,10)
         ctx.Render("index",recs)
     }
 
     func sign(ctx app.Context) {
-        DB  := db.New(ctx)
-        rec := Greeting{
+        rec := models.Greeting{
             Author : ctx.User.Nick,
             Content: ctx.GetValue("content"),
-            Date   : DB.Now(),
         }
-        DB.New(&rec)
+        models.NewGreeting(ctx,rec)
         ctx.Redirect("/")
     }
-
 
 As you can see, with app.go we make it really easy to write web apps in go. We welcome your feedback for any special request or bug fix.
 
@@ -60,6 +48,7 @@ Enjoy!
 CHANGELOG v3
 ------------
 * separation of app and db packages
+* encourage the use of models package for data manipulation
 * added filters to template parsing (soon to be replaced by new template package)
 
 
