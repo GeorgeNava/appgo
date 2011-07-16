@@ -26,7 +26,7 @@ Here is the Guestbook example from AppEngine rewritten using app.go
     }
 
     func index(ctx app.Context) {
-        DB := db.New(ctx)
+        DB   := db.New(ctx)
         recs := make([]Greeting, 0, 10)
         qry  := DB.Query("Greeting").Order("-Date").Limit(10)
         DB.Select(qry,&recs)
@@ -34,7 +34,7 @@ Here is the Guestbook example from AppEngine rewritten using app.go
     }
 
     func sign(ctx app.Context) {
-        DB := db.New(ctx)
+        DB  := db.New(ctx)
         rec := Greeting{
             Author : ctx.User.Nick,
             Content: ctx.GetValue("content"),
