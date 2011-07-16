@@ -1,5 +1,5 @@
-Welcome to app.go
-=================
+Welcome to app.go v3.0
+======================
 
 **app.go** is a simple web framework for use in Google AppEngine. Just copy the app folder to your working folder and import it from your main program. That's it. A web application ready to run in no time. Also, app.go comes with a powerful datastore manager to simplify your interactions with BigTable, making your code cleaner and safer.
 
@@ -8,7 +8,10 @@ Here is the Guestbook example from AppEngine rewritten using app.go
 
     package hello
 
-    import "app"
+    import(
+        "app"
+        "db"
+    )
 
     type Greeting struct {
         Author  string
@@ -22,21 +25,23 @@ Here is the Guestbook example from AppEngine rewritten using app.go
         app.Post( "/sign"  , sign  )
     }
 
-    func index(self app.Context) {
+    func index(ctx app.Context) {
+        DB := db.New(ctx)
         recs := make([]Greeting, 0, 10)
-        qry  := self.DB.Query("Greeting").Order("-Date").Limit(10)
-        self.DB.Select(qry,&recs)
-        self.Render("index",recs)
+        qry  := DB.Query("Greeting").Order("-Date").Limit(10)
+        DB.Select(qry,&recs)
+        ctx.Render("index",recs)
     }
 
-    func sign(self app.Context) {
+    func sign(ctx app.Context) {
+        DB := db.New(ctx)
         rec := Greeting{
-            Author : self.User.Nick,
-            Content: self.GetValue("content"),
-            Date   : self.DB.Now(),
+            Author : ctx.User.Nick,
+            Content: ctx.GetValue("content"),
+            Date   : DB.Now(),
         }
-        self.DB.New(&rec)
-        self.Redirect("/")
+        DB.New(&rec)
+        ctx.Redirect("/")
     }
 
 
@@ -52,10 +57,17 @@ Enjoy!
 * [My project is getting bigger, how to organize it?](appgo/wiki/organize)
 
 
+CHANGELOG v3
+------------
+* separation of app and db packages
+* added filters to template parsing (soon to be replaced by new template package)
+
+
 CHANGELOG v2
 ------------
-* implement regexp router
+* implemented regexp router
 * create new instance of DB for every request
 * use nanoseconds in db.sequence
 * on init: if no templates error/notfound generate default templates.
 * cache templates
+

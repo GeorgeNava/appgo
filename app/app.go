@@ -66,24 +66,6 @@ func Start(){
   http.HandleFunc("/",routeHandler())
 }
 
-func Run(views Views){
-  Log(">> APP running...")
-  root,_ := os.Getwd()
-  main := os.Getenv("APPLICATION_ID")
-  //main = appengine.NewContext(???).AppID()
-  Config.Root = root
-  if Config.Media == "*" {
-    Config.Media = path.Join(root, main)+"/"
-  }
-  if Config.Templates == "*" {
-    Config.Templates = path.Join(root, main)+"/"
-  }
-  server = &Server{}
-  server.initTemplates()
-  server.Views = views
-  http.HandleFunc("/",viewHandler())
-}
-
 func (s Server) initTemplates() {
   server.Templates = make(map[string]Template)
   if !fileExist(getTemplateName("error")) {
@@ -130,13 +112,6 @@ func getForm(r *http.Request) map[string]string {
   return form
 }
 
-func getDB(r *http.Request) DSM {
-  db := DSM{
-    Context:appengine.NewContext(r),
-  }
-  return db
-}
-
 func getContext(w http.ResponseWriter, r *http.Request) Context {
   ctx := Context{}
   ctx.Method      = r.Method
@@ -146,93 +121,8 @@ func getContext(w http.ResponseWriter, r *http.Request) Context {
   ctx.Request     = r
   ctx.Response    = w
   ctx.User        = setUser(r)
-  ctx.DB          = getDB(r)
+  ctx.Context     = appengine.NewContext(r)
   return ctx
-}
-
-
-
-
-//  APP Router  ------------------------------------------
-
-func Get(pattern string, view View) {
-  Handle("GET",pattern,view)
-}
-func Post(pattern string, view View) {
-  Handle("POST",pattern,view)
-}
-func Put(pattern string, view View) {
-  Handle("PUT",pattern,view)
-}
-func Delete(pattern string, view View) {
-  Handle("DELETE",pattern,view)
-}
-
-func Handle(method string, pattern string, view View) {
-  m  := strings.ToUpper(method)
-  rx, err := regexp.Compile(pattern)
-  if err!=nil {
-    Log(">>> ERROR compiling regexp: ",pattern)
-    return
-  }
-  server.Routes = append(server.Routes,Route{Method:m,Pattern:pattern,Handler:view,regex:rx})
-}
-
-func routeHandler() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		defer func() {
-			if err, ok := recover().(os.Error); ok {
-				w.WriteHeader(http.StatusInternalServerError)
-				t := getTemplate("error")
-				t.Execute(w, err)
-			}
-		}()
-        path := r.URL.Path
-        if path=="/" { path = "/index" }
-        meth := strings.ToUpper(r.Method)
-        req  := meth+" "+path
-        var route Route
-        var values []string
-        found := false
-        for i := range server.Routes {
-            if server.Routes[i].Method==meth && server.Routes[i].regex.MatchString(path) {
-                route  = server.Routes[i]
-                params := route.regex.FindAllStringSubmatch(path,-1)
-                values = params[0][1:]
-                found  = true
-                break
-            }
-        }
-        if found { 
-		  ctx := getContext(w,r)
-		  ctx.Values = values
-		  route.Handler(ctx)
-        } else { 
-          NotFound(w, "Couldn't match any handler for this pattern: "+req)
-		}
-	}
-}
-
-func viewHandler() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		defer func() {
-			if err, ok := recover().(os.Error); ok {
-				w.WriteHeader(http.StatusInternalServerError)
-				t := getTemplate("error")
-				t.Execute(w, err)
-			}
-		}()
-        paths := strings.Split(r.URL.Path,"/",-1)
-        path := paths[1]
-        if(path==""){ path = "index" }
-        fn := server.Views[path]
-        if fn==nil{ 
-          NotFound(w, "There is no view named '"+path+"' in our servers")
-        } else { 
-		  ctx := getContext(w,r)
-		  fn(ctx)
-		}
-	}
 }
 
 
@@ -248,7 +138,7 @@ type Context struct {
   Request   *http.Request
   Response   http.ResponseWriter
   User      *UserType
-  DB         DSM
+  Context    appengine.Context
 }
 
 func (ctx Context) GetValue(key string) string {
@@ -299,6 +189,70 @@ func (ctx Context) SetCookie(key string, val string, exp int64) {
   }
   cookie := fmt.Sprintf("%s=%s; expires=%s", key, val, webTime(utc))
   ctx.SetHeader("Set-Cookie", cookie)
+}
+
+
+
+
+//  APP Router  ------------------------------------------
+
+func Get(pattern string, view View) {
+  Handle("GET",pattern,view)
+}
+func Post(pattern string, view View) {
+  Handle("POST",pattern,view)
+}
+func Put(pattern string, view View) {
+  Handle("PUT",pattern,view)
+}
+func Delete(pattern string, view View) {
+  Handle("DELETE",pattern,view)
+}
+
+func Handle(method string, pattern string, view View) {
+  m  := strings.ToUpper(method)
+  if pattern[len(pattern)-1] != 36 { pattern = pattern + "$" }
+  rx, err := regexp.Compile(pattern)
+  if err!=nil {
+    Log(">>> ERROR compiling regexp: ",pattern)
+    return
+  }
+  server.Routes = append(server.Routes,Route{Method:m,Pattern:pattern,Handler:view,regex:rx})
+}
+
+func routeHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if err, ok := recover().(os.Error); ok {
+				w.WriteHeader(http.StatusInternalServerError)
+				t := getTemplate("error")
+				t.Execute(w, err)
+			}
+		}()
+        path := r.URL.Path
+        if path=="/" { path = "/index" }
+        meth := strings.ToUpper(r.Method)
+        req  := meth+" "+path
+        var route Route
+        var values []string
+        found := false
+        for i := range server.Routes {
+            if server.Routes[i].Method==meth && server.Routes[i].regex.MatchString(path) {
+                route  = server.Routes[i]
+                params := route.regex.FindAllStringSubmatch(path,-1)
+                values = params[0][1:]
+                found  = true
+                break
+            }
+        }
+        if found { 
+		  ctx := getContext(w,r)
+		  ctx.Values = values
+		  route.Handler(ctx)
+        } else { 
+          NotFound(w, "Couldn't match any handler for this pattern: "+req)
+		}
+	}
 }
 
 
@@ -358,7 +312,7 @@ func webTime(t *time.Time) string {
 func getTemplate(name string) *template.Template {
   tmp := server.Templates[name]
   if tmp==nil {
-    tmp = template.MustParseFile(getTemplateName(name),nil)
+    tmp = template.MustParseFile(getTemplateName(name),filters)
     server.Templates[name] = tmp
   }
   return tmp
@@ -366,9 +320,9 @@ func getTemplate(name string) *template.Template {
 
 func getTemplateName(name string) string {
   if strings.Contains(name,".") {
-    return Config.Templates + name
+    return Config.Templates +"/"+ name
   }
-  return Config.Templates + name + ".html"
+  return Config.Templates +"/"+ name + ".html"
 }
 
 func fileExist(name string) bool { 
